@@ -1,0 +1,47 @@
+name: Create Xata preview branch
+on:
+  pull_request:
+    types: [opened, reopened]
+
+env:
+  XATA_API_KEY: ${{ secrets.XATA_API_KEY }}
+  XATA_ORGANIZATION_ID: ${{ secrets.XATA_ORGANIZATION_ID }}
+  XATA_PROJECT_ID: ${{ secrets.XATA_PROJECT_ID }}
+  NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+  NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+
+jobs:
+  create-branch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install the Xata CLI
+        run: |
+          curl -fsSL https://xata.io/install.sh | bash
+          echo "$HOME/.config/xata/bin" >> $GITHUB_PATH
+
+      - name: Create a preview branch
+        run: |
+          xata branch create \
+            --organization "$XATA_ORGANIZATION_ID" \
+            --project "$XATA_PROJECT_ID" \
+            --name "pr-${{ github.event.number }}" \
+            --parent-branch "${{ secrets.XATA_PREVIEW_PARENT_BRANCH_ID }}" \
+            --scale-to-zero true
+
+      - name: Wait for the branch to be ready
+        run: |
+          xata branch wait-ready "pr-${{ github.event.number }}" \
+            --organization "$XATA_ORGANIZATION_ID" \
+            --project "$XATA_PROJECT_ID"
+
+      - name: Point the Deploy Preview at the branch
+        run: |
+          DATABASE_URL=$(xata branch url "pr-${{ github.event.number }}" --type pooler \
+            --organization "$XATA_ORGANIZATION_ID" \
+            --project "$XATA_PROJECT_ID")
+          if [ -z "$DATABASE_URL" ]; then
+            echo "No connection string returned for pr-${{ github.event.number }}" >&2
+            exit 1
+          fi
+          npx netlify-cli env:set DATABASE_URL "$DATABASE_URL" \
+            --context branch:${{ github.head_ref }}
