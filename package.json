@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "bench": "vitest bench --run"
   },
   "keywords": [],
   "author": "",
@@ -13,6 +14,8 @@
     "@neondatabase/serverless": "^1.1.0"
   },
   "devDependencies": {
-    "netlify-cli": "^27.1.2"
+    "@codspeed/vitest-plugin": "^5.7.1",
+    "netlify-cli": "^27.1.2",
+    "vitest": "^3.2.7"
   }
 }
